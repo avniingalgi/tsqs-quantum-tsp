@@ -1,19 +1,35 @@
-#this is the code which converts the measurement 000110 etc to city tours like 
- #0-1-2 the code converts the binary number in two blocks like 00 01 10 and then 
-#compares it to the city representation --HOBO encoding
-
-
 import math
+from tsp_data import distance_matrix
+from cost_function import compute_cost
 
-def decode_tour(bitstring, n):
+def decode_result(counts):
 
-    k = math.ceil(math.log2(n))   # number of qubits per city
+    best_state = max(counts, key=counts.get)
+    best_state = best_state.split()[0]
 
-    tour = []
+    print("Best quantum state:", best_state)
 
-    for i in range(0, len(bitstring), k):
-        city_bits = bitstring[i:i+k]
-        city = int(city_bits, 2)
-        tour.append(city)
+    n = len(distance_matrix)
+    k = math.ceil(math.log2(n))
 
-    return tour
+    route = []
+    used = set()
+
+    # Step 1: Decode into cities
+    for i in range(0, len(best_state), k):
+        bits = best_state[i:i+k]
+        city = int(bits, 2)
+
+        if city < n and city not in used:
+            route.append(city)
+            used.add(city)
+
+    # Step 2: Add missing cities
+    for city in range(n):
+        if city not in used:
+            route.append(city)
+
+    # Step 3: Compute cost
+    cost = compute_cost(route, distance_matrix)
+
+    return route, cost

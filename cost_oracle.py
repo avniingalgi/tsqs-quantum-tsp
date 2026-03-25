@@ -1,30 +1,51 @@
-from qiskit import QuantumCircuit
-from decode import decode_tour
+import itertools
+import math
+from tsp_data import distance_matrix
 from cost_function import compute_cost
 
-def cost_oracle(n_qubits, counts, n_cities, distance_matrix):
+def apply_cost_oracle(qc, total_qubits):
 
-    qc = QuantumCircuit(n_qubits)
+    n = len(distance_matrix)
+    k = math.ceil(math.log2(n))
 
-    best_cost = 999
+    # Step 1: Generate all routes
+    all_routes = list(itertools.permutations(range(n)))
 
-    for bitstring in counts:
+    # Step 2: Find best route
+    best_route = None
+    min_cost = float('inf')
 
-        tour = decode_tour(bitstring, n_cities)
+    for route in all_routes:
+        cost = compute_cost(list(route), distance_matrix)
 
-        # remove invalid tours
-        if any(city >= n_cities for city in tour):
-            continue
+        if cost < min_cost:
+            min_cost = cost
+            best_route = route
 
-        if len(set(tour)) != n_cities:
-            continue
+    print("Best route (classical):", best_route)
+    print("Minimum cost:", min_cost)
 
-        cost = compute_cost(tour, distance_matrix)
+    # Step 3: Convert route to HOBO binary
+    target_state = ""
 
-        if cost < best_cost:
-            best_cost = cost
+    for city in best_route:
+        binary = format(city, f'0{k}b')  # k-bit binary
+        target_state += binary
 
-    # simplified phase marking
-    qc.z(1)
+    # Step 4: Match total_qubits
+    target_state = target_state.ljust(total_qubits, '0')
+
+    # Step 5: Apply phase flip
+    for i in range(total_qubits):
+        if target_state[i] == '0':
+            qc.x(i)
+
+    qc.h(total_qubits - 1)
+    qc.mcx(list(range(total_qubits - 1)), total_qubits - 1)
+    qc.h(total_qubits - 1)
+
+    for i in range(total_qubits):
+        if target_state[i] == '0':
+            qc.x(i)
 
     return qc

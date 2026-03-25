@@ -1,16 +1,15 @@
 from qiskit import QuantumCircuit
 import math
 
-def create_superposition(n):
+def create_circuit(n_cities):
 
-    k = math.ceil(math.log2(n))
-    n_qubits = n * k
+    k = math.ceil(math.log2(n_cities))   # qubits per city
+    total_qubits = n_cities * k
 
-    qc = QuantumCircuit(n_qubits, n_qubits)
+    qc = QuantumCircuit(total_qubits, total_qubits)
 
-    for i in range(n_qubits):
+    # Create superposition
+    for i in range(total_qubits):
         qc.h(i)
 
-    qc.barrier()
-
-    return qc
+    return qc, total_qubits, k

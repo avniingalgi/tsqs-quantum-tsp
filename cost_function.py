@@ -1,5 +1,5 @@
 def compute_cost(tour, distance_matrix):
-
+#The total tour cost is calculated using the distance matrix.
     cost = 0
 
     for i in range(len(tour)-1):

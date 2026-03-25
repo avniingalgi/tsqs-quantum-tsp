@@ -1,51 +1,48 @@
-from tsp_data import distance_matrix, n_cities
-from quantum_circuit import create_superposition
+from tsp_data import num_cities
+from quantum_circuit import create_circuit
+from validity_oracle import apply_validity_oracle
+from cost_oracle import apply_cost_oracle
+from grover_diffusion import apply_diffusion
 from run_simulation import run_circuit
-from decode import decode_tour
-from cost_function import compute_cost
-from validity_oracle import validity_oracle
-from grover_diffusion import diffusion_operator
+from decode import decode_result
 
-# Create circuit
-qc = create_superposition(n_cities)
+def main():
 
-# Step-1 oracle
-oracle = validity_oracle(qc.num_qubits)
-qc.compose(oracle, inplace=True)
+    print("Starting TSQS for TSP...\n")
 
-# Diffusion
-diff = diffusion_operator(qc.num_qubits)
-qc.compose(diff, inplace=True)
-print(qc.draw()) 
-# Measurement
-qc.measure(range(qc.num_qubits), range(qc.num_qubits))
+    num_qubits = num_cities
 
-# Run circuit
-counts = run_circuit(qc)
+    # Step 1: Create circuit
+    qc, total_qubits, k = create_circuit(num_cities)
 
-print("Measured states:")
-print(counts)
+    # Step 2: Validity oracle
+    qc = apply_validity_oracle(qc, total_qubits)
 
-best_cost = 999
-best_tour = None
+    # Step 3: Diffusion
+    qc = apply_diffusion(qc, total_qubits)
 
-for bitstring in counts:
+    # Step 4: Cost oracle
+    qc = apply_cost_oracle(qc, total_qubits)
 
-    tour = decode_tour(bitstring, n_cities)
+    # Step 5: Diffusion again
+    qc = apply_diffusion(qc, total_qubits)
 
-    # remove invalid cities
-    if any(city >= n_cities for city in tour):
-        continue
+    # Step 6: Measurement
+    qc.measure_all()
 
-    # remove duplicates
-    if len(set(tour)) != n_cities:
-        continue
+    # ✅ THIS LINE WAS MISSING
+    counts = run_circuit(qc)
 
-    cost = compute_cost(tour, distance_matrix)
+    print("\nMeasurement Results:")
+    print(counts)
 
-    if cost < best_cost:
-        best_cost = cost
-        best_tour = tour
+    # Step 7: Decode
+    route, cost = decode_result(counts)
 
-print("\nBest tour:", best_tour + [best_tour[0]])
-print("Cost:", best_cost)
+    print("\nFinal Output:")
+    print("Optimal Route:", route)
+    print("Minimum Cost:", cost)
+
+
+if __name__ == "__main__":
+    main()
