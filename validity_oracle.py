@@ -1,44 +1,32 @@
-from tsp_data import distance_matrix
 import itertools
+import math
+from tsp_data import distance_matrix
 
-def is_valid_route(route, n):
-    return sorted(route) == list(range(n))
+def apply_validity_oracle(qc, total_qubits):
 
+    n = len(distance_matrix)
+    k = math.ceil(math.log2(n))
 
-def apply_validity_oracle(qc, num_qubits):
-    """
-    Marks valid routes by phase flipping.
-    Uses classical validation logic for simplicity.
-    """
+    # pick one valid permutation
+    valid_route = list(itertools.permutations(range(n)))[0]
 
-    # Generate all possible routes
-    n = num_qubits
-    all_routes = list(itertools.permutations(range(n)))
+    target_state = ""
 
-    # Find valid routes (all permutations are valid in TSP basic form)
-    valid_routes = []
+    for city in valid_route:
+        target_state += format(city, f'0{k}b')
 
-    for route in all_routes:
-        if is_valid_route(route, n):
-            valid_routes.append(route)
+    target_state = target_state.ljust(total_qubits, '0')
 
-    # For simplicity, mark ONE valid route
-    # (full marking requires complex circuit)
-    target_route = valid_routes[0]
-
-    # Convert route to binary string
-    target_state = ''.join([str(x % 2) for x in target_route])
-
-    # Apply phase flip for that state
-    for i in range(num_qubits):
+    # mark valid state
+    for i in range(total_qubits):
         if target_state[i] == '0':
             qc.x(i)
 
-    qc.h(num_qubits - 1)
-    qc.mcx(list(range(num_qubits - 1)), num_qubits - 1)
-    qc.h(num_qubits - 1)
+    qc.h(total_qubits - 1)
+    qc.mcx(list(range(total_qubits - 1)), total_qubits - 1)
+    qc.h(total_qubits - 1)
 
-    for i in range(num_qubits):
+    for i in range(total_qubits):
         if target_state[i] == '0':
             qc.x(i)
 

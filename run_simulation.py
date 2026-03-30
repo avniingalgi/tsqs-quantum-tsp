@@ -7,7 +7,7 @@ def run_circuit(qc):
 
     compiled = transpile(qc, simulator)
 
-    result = simulator.run(compiled, shots=1024).result()
+    result = simulator.run(compiled, shots=4096).result()
 
     counts = result.get_counts()
 
