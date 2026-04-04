@@ -2,7 +2,7 @@ import itertools
 import math
 from tsp_data import distance_matrix
 
-def apply_validity_oracle(qc, total_qubits):
+def apply_validity_oracle(qc, total_qubits,distance_matrix):
 
     n = len(distance_matrix)
     k = math.ceil(math.log2(n))

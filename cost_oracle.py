@@ -1,51 +1,55 @@
 import itertools
 import math
-from tsp_data import distance_matrix
+import numpy as np
 from cost_function import compute_cost
 
-def apply_cost_oracle(qc, total_qubits):
+
+def apply_cost_oracle(qc, total_qubits,distance_matrix):
 
     n = len(distance_matrix)
     k = math.ceil(math.log2(n))
 
-    # Step 1: Generate all routes
+    # Step 1: generate all routes
     all_routes = list(itertools.permutations(range(n)))
 
-    # Step 2: Find best route
-    best_route = None
-    min_cost = float('inf')
-
+    # Step 2: compute costs
+    costs = []
     for route in all_routes:
         cost = compute_cost(list(route), distance_matrix)
+        costs.append(cost)
 
-        if cost < min_cost:
-            min_cost = cost
-            best_route = route
+    # Normalize costs (important)
+    max_cost = max(costs)
+    min_cost = min(costs)
 
-    print("Best route (classical):", best_route)
-    print("Minimum cost:", min_cost)
+    # Step 3: apply phase shifts
+    for idx, route in enumerate(all_routes):
 
-    # Step 3: Convert route to HOBO binary
-    target_state = ""
+        cost = costs[idx]
 
-    for city in best_route:
-        binary = format(city, f'0{k}b')  # k-bit binary
-        target_state += binary
+        # normalize between 0 and π
+        if max_cost != min_cost:
+            phase = (cost - min_cost) / (max_cost - min_cost) * np.pi
+        else:
+            phase = 0
 
-    # Step 4: Match total_qubits
-    target_state = target_state.ljust(total_qubits, '0')
+        # encode route into HOBO binary
+        target_state = ""
+        for city in route:
+            target_state += format(city, f'0{k}b')
 
-    # Step 5: Apply phase flip
-    for i in range(total_qubits):
-        if target_state[i] == '0':
-            qc.x(i)
+        target_state = target_state.ljust(total_qubits, '0')
 
-    qc.h(total_qubits - 1)
-    qc.mcx(list(range(total_qubits - 1)), total_qubits - 1)
-    qc.h(total_qubits - 1)
+        # Apply phase only to matching state
+        for i in range(total_qubits):
+            if target_state[i] == '0':
+                qc.x(i)
 
-    for i in range(total_qubits):
-        if target_state[i] == '0':
-            qc.x(i)
+        # Phase rotation (THIS IS NEW)
+        qc.rz(phase, total_qubits - 1)
+
+        for i in range(total_qubits):
+            if target_state[i] == '0':
+                qc.x(i)
 
     return qc
